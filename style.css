@@ -277,3 +277,88 @@ body {
     color: #999;
     margin-top: 2rem;
 }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+    }
+
+    .player-column {
+        padding: 1rem;
+        order: 1; /* Player appears first */
+    }
+
+    .playlist-column {
+        width: 100%;
+        height: 50vh; /* Or a fixed height */
+        border-left: none;
+        border-top: 1px solid #222;
+        order: 2; /* Playlist appears after player */
+    }
+
+    .album-art {
+        width: 200px;
+        height: 200px;
+        margin-bottom: 1.5rem;
+    }
+
+    #song-title {
+        font-size: 1.8rem;
+    }
+
+    #song-artist {
+        font-size: 1rem;
+    }
+
+    .control-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 1.2rem;
+    }
+
+    .play-btn {
+        width: 70px;
+        height: 70px;
+        font-size: 2rem;
+    }
+
+    .playlist-header #search-bar {
+        width: 100px;
+    }
+}
+
+@media (max-width: 480px) {
+    .album-art {
+        width: 150px;
+        height: 150px;
+    }
+
+    #song-title {
+        font-size: 1.5rem;
+    }
+
+    #song-artist {
+        font-size: 0.9rem;
+    }
+
+    .control-btn {
+        width: 50px;
+        height: 50px;
+        font-size: 1rem;
+    }
+
+    .play-btn {
+        width: 60px;
+        height: 60px;
+        font-size: 1.5rem;
+    }
+
+    .player-column {
+        padding: 0.5rem;
+    }
+
+    .playlist-column {
+        height: 45vh;
+    }
+}
