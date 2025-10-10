@@ -4,7 +4,6 @@ body {
     background-color: #000;
     color: #fff;
     margin: 0;
-    overflow: hidden;
 }
 
 .app-container {
@@ -165,14 +164,97 @@ body {
     border-radius: 50%;
 }
 
+/* Resizers */
+.resizer {
+    background-color: #222;
+    flex-shrink: 0;
+    /* Default hidden, shown by specific resizer classes */
+    display: none;
+}
+
+.horizontal-resizer {
+    width: 10px;
+    cursor: ew-resize;
+    display: block; /* Show by default for desktop */
+}
+
+.vertical-resizer {
+    height: 10px;
+    cursor: ns-resize;
+    display: none; /* Hidden by default, shown on mobile */
+}
+
 /* Playlist Column (Right) */
 .playlist-column {
-    width: 350px;
+    width: 350px; /* Initial width */
+    min-width: 200px; /* Minimum width for the playlist */
+    max-width: 600px; /* Maximum width for the playlist */
     background-color: #0a0a0a;
     border-left: 1px solid #222;
     display: flex;
     flex-direction: column;
     height: 100%;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .app-container {
+        flex-direction: column;
+        height: auto; /* Allow height to adjust to content */
+        min-height: 100vh; /* Ensure it takes at least full viewport height */
+        overflow-y: auto; /* Make app-container scrollable on mobile */
+    }
+
+    .player-column {
+        padding: 1rem;
+        order: 1; /* Player appears first */
+    }
+
+    .horizontal-resizer {
+        display: none; /* Hide horizontal resizer on mobile */
+    }
+
+    .vertical-resizer {
+        display: block; /* Show vertical resizer on mobile */
+        position: absolute; /* Position relative to playlist-column */
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 20px; /* Make it taller for easier dragging */
+        background-color: rgba(255, 255, 255, 0.1); /* Semi-transparent for visibility */
+        border-bottom: 1px solid #333;
+        z-index: 101; /* Above playlist-column */
+    }
+
+    .playlist-column {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-height: 90vh; /* Max height for the sheet */
+        background-color: #0a0a0a;
+        border-top: 1px solid #222;
+        display: flex;
+        flex-direction: column;
+        height: auto; /* Height will be controlled by transform */
+        transform: translateY(calc(100% - 150px)); /* Initial peek */
+        transition: transform 0.3s ease-out; /* Smooth animation */
+        z-index: 100;
+    }
+
+    .playlist-column.playlist-expanded {
+        transform: translateY(0); /* Fully expanded */
+    }
+
+    .playlist-header {
+        padding-top: 25px; /* Make space for the vertical resizer */
+    }
+
+    .mobile-only-btn {
+        display: block; /* Show on mobile */
+        margin-left: 0.5rem;
+    }
+
 }
 
 .playlist-header {
@@ -276,56 +358,6 @@ body {
     text-align: center;
     color: #999;
     margin-top: 2rem;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .app-container {
-        flex-direction: column;
-    }
-
-    .player-column {
-        padding: 1rem;
-        order: 1; /* Player appears first */
-    }
-
-    .playlist-column {
-        width: 100%;
-        height: 50vh; /* Or a fixed height */
-        border-left: none;
-        border-top: 1px solid #222;
-        order: 2; /* Playlist appears after player */
-    }
-
-    .album-art {
-        width: 200px;
-        height: 200px;
-        margin-bottom: 1.5rem;
-    }
-
-    #song-title {
-        font-size: 1.8rem;
-    }
-
-    #song-artist {
-        font-size: 1rem;
-    }
-
-    .control-btn {
-        width: 60px;
-        height: 60px;
-        font-size: 1.2rem;
-    }
-
-    .play-btn {
-        width: 70px;
-        height: 70px;
-        font-size: 2rem;
-    }
-
-    .playlist-header #search-bar {
-        width: 100px;
-    }
 }
 
 @media (max-width: 480px) {

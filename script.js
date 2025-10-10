@@ -19,6 +19,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const playlistTitle = document.getElementById('playlist-title');
     const searchBar = document.getElementById('search-bar');
     const volumeSlider = document.getElementById('volume-slider');
+    const togglePlaylistBtn = document.getElementById('toggle-playlist-btn'); // New button
 
     let playlist = [];
     let currentSongIndex = -1;
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     searchBar.addEventListener('keyup', filterPlaylist);
     fileInput.addEventListener('change', loadSongsFromLocal);
     githubLoadBtn.addEventListener('click', promptAndLoadFromGitHub);
+    togglePlaylistBtn.addEventListener('click', togglePlaylistExpanded); // New event listener
 
     audioPlayer.addEventListener('play', () => playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>');
     audioPlayer.addEventListener('pause', () => playPauseBtn.innerHTML = '<i class="fas fa-play"></i>');
@@ -48,6 +50,15 @@ document.addEventListener('DOMContentLoaded', () => {
     audioPlayer.addEventListener('ended', playNextSong);
     progressContainer.addEventListener('click', setProgress);
 
+    // Add error logging for audio player
+    audioPlayer.addEventListener('error', (e) => {
+        console.error('Audio Error:', e.target.error.code, e.target.error.message);
+        alert('Error playing audio: ' + e.target.error.message);
+    });
+    audioPlayer.addEventListener('canplaythrough', () => {
+        console.log('Can play through audio');
+    });
+
     // --- Main Loading Functions ---
     function promptAndLoadFromGitHub() {
         const currentRepo = localStorage.getItem('githubRepoPath') || 'ryyReid/music/likedsongs';
@@ -61,9 +72,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function loadSongsFromGitHub(repoPath) {
-        const parts = repoPath.split('/');
+        // Clean and split the repoPath
+        const cleanedPath = repoPath.replace(/(^\/|\/$)/g, '').replace(/\/tree\/main/, ''); // Remove leading/trailing slashes and /tree/main
+        const parts = cleanedPath.split('/').filter(part => part !== ''); // Split and remove empty parts
+
         if (parts.length < 3) {
-            playlistContainer.innerHTML = '<p class="empty-playlist-msg">Invalid path format. Please use user/repo/path.</p>';
+            playlistContainer.innerHTML = '<p class="empty-playlist-msg">Invalid path format. Please use user/repo/path/to/songs (e.g., ryyReid/music/likedsongs).</p>';
             return;
         }
         const user = parts[0];
@@ -163,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSongIndex = index;
         const song = playlist[currentSongIndex];
         audioPlayer.src = song.url;
+        console.log('Loading song:', song.title, 'from URL:', song.url);
         songTitle.textContent = song.title;
         songArtist.textContent = song.artist;
         albumArt.style.backgroundImage = 'none';
@@ -172,14 +187,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function playSong(index) {
         loadSong(index);
+        console.log('Attempting to play song at index:', index);
         audioPlayer.play();
     }
 
     function togglePlayPause() {
         if (currentSongIndex === -1) return;
         if (audioPlayer.paused) {
+            console.log('Playing audio');
             audioPlayer.play();
         } else {
+            console.log('Pausing audio');
             audioPlayer.pause();
         }
     }
@@ -213,7 +231,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function setProgress(e) {
-        if (currentSongIndex === -1) return;
+        if (currentSongIndex === -1 || !isFinite(audioPlayer.duration)) return;
         const width = progressContainer.clientWidth;
         const clickX = e.offsetX;
         audioPlayer.currentTime = (clickX / width) * audioPlayer.duration;
@@ -254,4 +272,68 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     initializePlayer();
+
+    // --- Resizer Logic ---
+    const horizontalResizer = document.getElementById('horizontal-resizer');
+    const verticalResizer = document.getElementById('vertical-resizer');
+    const playlistColumn = document.querySelector('.playlist-column');
+    const appContainer = document.querySelector('.app-container');
+    const playerColumn = document.querySelector('.player-column'); // Get player column
+
+    // Function to toggle playlist expanded state
+    function togglePlaylistExpanded() {
+        if (window.matchMedia('(max-width: 768px)').matches) {
+            playlistColumn.classList.toggle('playlist-expanded');
+            const icon = togglePlaylistBtn.querySelector('i');
+            if (playlistColumn.classList.contains('playlist-expanded')) {
+                icon.classList.remove('fa-chevron-up');
+                icon.classList.add('fa-chevron-down');
+                playerColumn.style.opacity = '0';
+                playerColumn.style.pointerEvents = 'none';
+            } else {
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+                playerColumn.style.opacity = '1';
+                playerColumn.style.pointerEvents = 'auto';
+            }
+        }
+    }
+
+    // Horizontal Resizing (Desktop)
+    horizontalResizer.addEventListener('mousedown', (e) => {
+        if (window.matchMedia('(min-width: 769px)').matches) {
+            let isResizing = true;
+            document.body.style.cursor = 'ew-resize';
+            appContainer.style.userSelect = 'none';
+            appContainer.style.pointerEvents = 'none';
+
+            const mouseMoveHandler = (e) => {
+                if (!isResizing) return;
+                const appContainerRect = appContainer.getBoundingClientRect();
+                const newPlaylistWidth = appContainerRect.right - e.clientX;
+                const minWidth = 200; 
+                const maxWidth = 600; 
+
+                if (newPlaylistWidth >= minWidth && newPlaylistWidth <= maxWidth) {
+                    playlistColumn.style.width = `${newPlaylistWidth}px`;
+                }
+            };
+
+            const mouseUpHandler = () => {
+                isResizing = false;
+                document.body.style.cursor = 'default';
+                appContainer.style.userSelect = '';
+                appContainer.style.pointerEvents = '';
+                document.removeEventListener('mousemove', mouseMoveHandler);
+                document.removeEventListener('mouseup', mouseUpHandler);
+            };
+
+            document.addEventListener('mousemove', mouseMoveHandler);
+            document.addEventListener('mouseup', mouseUpHandler);
+        }
+    });
+
+    // Vertical Resizing (Mobile - simplified to toggle)
+    verticalResizer.addEventListener('click', togglePlaylistExpanded);
+
 });

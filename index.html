@@ -45,6 +45,10 @@
             </div>
         </div>
 
+        <!-- Resizer -->
+        <div class="resizer horizontal-resizer" id="horizontal-resizer"></div>
+        <div class="resizer vertical-resizer" id="vertical-resizer"></div>
+
         <!-- Right Column: Song List -->
         <div class="playlist-column">
             <div class="playlist-header">
@@ -52,6 +56,7 @@
                 <input type="text" id="search-bar" placeholder="Search...">
                 <label for="file-input" class="add-btn"><i class="fas fa-plus"></i></label>
                 <button id="github-load-btn" class="add-btn"><i class="fab fa-github"></i></button>
+                <button id="toggle-playlist-btn" class="add-btn mobile-only-btn"><i class="fas fa-chevron-up"></i></button>
                 <input type="file" id="file-input" multiple accept="audio/*" style="display: none;" webkitdirectory>
             </div>
             <div id="playlist" class="playlist-content">
