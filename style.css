@@ -129,6 +129,22 @@ body {
     display: flex;
     justify-content: center;
     align-items: center;
+    /* NEW: Spacing for shuffle and repeat buttons */
+    gap: 1.5rem; 
+}
+
+/* NEW: Style for shuffle and repeat buttons */
+.extra-controls .control-btn {
+    width: 40px; 
+    height: 40px;
+    font-size: 1rem;
+    margin: 0; 
+}
+
+/* NEW: Active State for Shuffle and Repeat */
+.control-btn.active {
+    color: #1DB954; 
+    background-color: #333;
 }
 
 .volume-container {

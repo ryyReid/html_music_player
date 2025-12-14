@@ -19,10 +19,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const playlistTitle = document.getElementById('playlist-title');
     const searchBar = document.getElementById('search-bar');
     const volumeSlider = document.getElementById('volume-slider');
-    const togglePlaylistBtn = document.getElementById('toggle-playlist-btn'); // New button
+    const togglePlaylistBtn = document.getElementById('toggle-playlist-btn'); 
+
+    // NEW CONTROLS
+    const shuffleBtn = document.getElementById('shuffle-btn');
+    const repeatBtn = document.getElementById('repeat-btn');
 
     let playlist = [];
     let currentSongIndex = -1;
+    // NEW STATE VARIABLES
+    let isShuffling = false;
+    let repeatMode = 'none'; // 'none', 'one', 'all'
 
     // --- Event Listeners ---
     playPauseBtn.addEventListener('click', togglePlayPause);
@@ -32,7 +39,12 @@ document.addEventListener('DOMContentLoaded', () => {
     searchBar.addEventListener('keyup', filterPlaylist);
     fileInput.addEventListener('change', loadSongsFromLocal);
     githubLoadBtn.addEventListener('click', promptAndLoadFromGitHub);
-    togglePlaylistBtn.addEventListener('click', togglePlaylistExpanded); // New event listener
+    togglePlaylistBtn.addEventListener('click', togglePlaylistExpanded); 
+    
+    // NEW EVENT LISTENERS
+    shuffleBtn.addEventListener('click', toggleShuffle);
+    repeatBtn.addEventListener('click', toggleRepeat);
+    document.addEventListener('keydown', handleKeyboardControls);
 
     audioPlayer.addEventListener('play', () => playPauseBtn.innerHTML = '<i class="fas fa-pause"></i>');
     audioPlayer.addEventListener('pause', () => playPauseBtn.innerHTML = '<i class="fas fa-play"></i>');
@@ -47,7 +59,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-    audioPlayer.addEventListener('ended', playNextSong);
+    // UPDATED: Play next song logic now handles repeat/shuffle
+    audioPlayer.addEventListener('ended', playNextSong); 
+    // UPDATED: Progress container click logic uses getBoundingClientRect
     progressContainer.addEventListener('click', setProgress);
 
     // Add error logging for audio player
@@ -103,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             title: item.name.replace(/\.mp3|\.wav|\.ogg|\.flac/gi, ''),
                             artist: 'GitHub',
                             url: item.download_url
+                            // No fileObject for GitHub files, so no jsmediatags for them
                         };
                         playlist.push(song);
                     }
@@ -122,6 +137,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
     }
 
+    // UPDATED: Load local songs and trigger metadata reading
     function loadSongsFromLocal(e) {
         const files = e.target.files;
         if (files.length === 0) return;
@@ -132,9 +148,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 const song = {
                     title: file.name.replace(/\.mp3|\.wav|\.ogg|\.flac/gi, ''),
                     artist: 'Local File',
-                    url: URL.createObjectURL(file)
+                    url: URL.createObjectURL(file),
+                    // NEW: Store the File object to read metadata later
+                    fileObject: file 
                 };
                 playlist.push(song);
+                
+                // NEW: Kick off metadata loading immediately
+                loadMetadata(file, playlist.length - 1);
             }
         });
         renderPlaylist();
@@ -146,6 +167,56 @@ document.addEventListener('DOMContentLoaded', () => {
             playlistContainer.innerHTML = '<p class="empty-playlist-msg">No audio files found.</p>';
         }
     }
+    
+    // NEW: Function to read and apply metadata (jsmediatags required)
+    function loadMetadata(file, index) {
+        // Check if jsmediatags is available
+        if (typeof jsmediatags === 'undefined') return;
+
+        jsmediatags.read(file, {
+            onSuccess: function(tag) {
+                // Update playlist with extracted metadata
+                const newTitle = tag.tags.title || playlist[index].title;
+                const newArtist = tag.tags.artist || 'Local File';
+                
+                playlist[index].title = newTitle;
+                playlist[index].artist = newArtist;
+                
+                // Update the UI immediately
+                const item = playlistContainer.querySelector(`.playlist-item[data-index="${index}"]`);
+                if (item) {
+                    item.querySelector('h4').textContent = newTitle;
+                    item.querySelector('p').textContent = newArtist;
+                }
+
+                // If this is the *currently playing* song, update the art
+                if (index === currentSongIndex) {
+                    applyAlbumArt(tag.tags.picture);
+                }
+            },
+            onError: function(error) {
+                console.log("Error reading tags for", file.name, ":", error.type);
+            }
+        });
+    }
+    
+    // NEW: Function to handle image data and apply it as background
+    function applyAlbumArt(picture) {
+        if (picture && picture.data) {
+            let base64String = "";
+            for (let i = 0; i < picture.data.length; i++) {
+                base64String += String.fromCharCode(picture.data[i]);
+            }
+            const base64 = "data:" + picture.format + ";base64," + window.btoa(base64String);
+            
+            albumArt.style.backgroundImage = `url('${base64}')`;
+            albumArt.innerHTML = ''; // Remove the default music icon
+        } else {
+            albumArt.style.backgroundImage = 'none';
+            albumArt.innerHTML = '<i class="fas fa-music"></i>'; // Fallback to icon
+        }
+    }
+
 
     function renderPlaylist() {
         playlistContainer.innerHTML = '';
@@ -172,16 +243,25 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- Player Control Functions ---
+    // UPDATED: Clears album art for non-local songs and triggers metadata/art update for local files
     function loadSong(index) {
         if (index < 0 || index >= playlist.length) return;
         currentSongIndex = index;
         const song = playlist[currentSongIndex];
         audioPlayer.src = song.url;
         console.log('Loading song:', song.title, 'from URL:', song.url);
+        
         songTitle.textContent = song.title;
         songArtist.textContent = song.artist;
-        albumArt.style.backgroundImage = 'none';
-        albumArt.innerHTML = '<i class="fas fa-music"></i>';
+        
+        if (song.fileObject) {
+            loadMetadata(song.fileObject, currentSongIndex); 
+        } else {
+            // Clear art for GitHub songs (or other external sources)
+            albumArt.style.backgroundImage = 'none';
+            albumArt.innerHTML = '<i class="fas fa-music"></i>';
+        }
+        
         updateActivePlaylistItem();
     }
 
@@ -202,16 +282,93 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function playNextSong() {
-        if (playlist.length === 0) return;
-        currentSongIndex = (currentSongIndex + 1) % playlist.length;
-        playSong(currentSongIndex);
-    }
-
     function playPrevSong() {
         if (playlist.length === 0) return;
         currentSongIndex = (currentSongIndex - 1 + playlist.length) % playlist.length;
         playSong(currentSongIndex);
+    }
+
+    // NEW LOGIC: Shuffle and Repeat Handlers
+    function toggleShuffle() {
+        isShuffling = !isShuffling;
+        shuffleBtn.classList.toggle('active', isShuffling);
+    }
+
+    function toggleRepeat() {
+        if (repeatMode === 'none') {
+            repeatMode = 'all';
+            repeatBtn.innerHTML = '<i class="fas fa-repeat"></i>';
+            repeatBtn.classList.add('active');
+        } else if (repeatMode === 'all') {
+            repeatMode = 'one';
+            repeatBtn.innerHTML = '<i class="fas fa-repeat-1"></i>'; 
+        } else {
+            repeatMode = 'none';
+            repeatBtn.innerHTML = '<i class="fas fa-repeat"></i>';
+            repeatBtn.classList.remove('active');
+        }
+    }
+
+    // UPDATED: Incorporate Shuffle and Repeat logic
+    function playNextSong() {
+        if (playlist.length === 0) return;
+
+        let nextIndex = currentSongIndex;
+
+        if (repeatMode === 'one') {
+            // Stay on current song
+        } else if (isShuffling) {
+            // Pick a random, non-current song
+            let newIndex;
+            do {
+                newIndex = Math.floor(Math.random() * playlist.length);
+            } while (newIndex === currentSongIndex && playlist.length > 1);
+            nextIndex = newIndex;
+        } else {
+            // Normal sequential play
+            nextIndex = (currentSongIndex + 1);
+        }
+
+        if (nextIndex >= playlist.length) {
+            if (repeatMode === 'all') {
+                nextIndex = 0; // Loop back to start
+            } else {
+                // Stop playback
+                audioPlayer.pause();
+                playPauseBtn.innerHTML = '<i class="fas fa-play"></i>';
+                loadSong(0); // Load first song but stay paused
+                return;
+            }
+        }
+
+        playSong(nextIndex);
+    }
+    
+    // NEW LOGIC: Keyboard Controls
+    function handleKeyboardControls(e) {
+        // Prevent interfering with search/text input
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') {
+            return;
+        }
+
+        switch (e.key) {
+            case ' ': // Spacebar for play/pause
+                e.preventDefault(); 
+                togglePlayPause();
+                break;
+            case 'ArrowRight': // Seek forward 5 seconds
+                e.preventDefault();
+                if (currentSongIndex !== -1) {
+                    audioPlayer.currentTime = Math.min(audioPlayer.currentTime + 5, audioPlayer.duration);
+                }
+                break;
+            case 'ArrowLeft': // Seek backward 5 seconds
+                e.preventDefault();
+                if (currentSongIndex !== -1) {
+                    audioPlayer.currentTime = Math.max(audioPlayer.currentTime - 5, 0);
+                }
+                break;
+        }
     }
 
     // --- UI Update Functions ---
@@ -230,10 +387,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // UPDATED: Using getBoundingClientRect for accurate seeking
     function setProgress(e) {
         if (currentSongIndex === -1 || !isFinite(audioPlayer.duration)) return;
-        const width = progressContainer.clientWidth;
-        const clickX = e.offsetX;
+        
+        const rect = progressContainer.getBoundingClientRect();
+        const clickX = e.clientX - rect.left; // X position relative to the element
+        const width = rect.width;
+
         audioPlayer.currentTime = (clickX / width) * audioPlayer.duration;
     }
 
@@ -278,7 +439,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const verticalResizer = document.getElementById('vertical-resizer');
     const playlistColumn = document.querySelector('.playlist-column');
     const appContainer = document.querySelector('.app-container');
-    const playerColumn = document.querySelector('.player-column'); // Get player column
+    const playerColumn = document.querySelector('.player-column'); 
 
     // Function to toggle playlist expanded state
     function togglePlaylistExpanded() {

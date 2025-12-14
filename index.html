@@ -5,13 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Music Player</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Local vendor files for offline use -->
     <link rel="stylesheet" href="vendor/css/all.css">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&display=swap">
+    <script src="https://cdn.jsdelivr.net/npm/jsmediatags@3.9.7/dist/jsmediatags.min.js"></script>
 </head>
 <body>
     <div class="app-container">
-        <!-- Center Column: Player -->
         <div class="player-column">
             <div class="player-main">
                 <div id="album-art" class="album-art">
@@ -34,22 +33,23 @@
                         <button id="next-btn" class="control-btn"><i class="fas fa-forward-step"></i></button>
                     </div>
                     <div class="extra-controls">
+                        <button id="shuffle-btn" class="control-btn small-control-btn" title="Toggle Shuffle"><i class="fas fa-shuffle"></i></button>
+                        
                         <div class="volume-container">
                             <i class="fas fa-volume-down"></i>
                             <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="1">
                             <i class="fas fa-volume-up"></i>
                         </div>
-                        <!-- Placeholder for other controls -->
+                        
+                        <button id="repeat-btn" class="control-btn small-control-btn" title="Toggle Repeat"><i class="fas fa-repeat"></i></button>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- Resizer -->
         <div class="resizer horizontal-resizer" id="horizontal-resizer"></div>
         <div class="resizer vertical-resizer" id="vertical-resizer"></div>
 
-        <!-- Right Column: Song List -->
         <div class="playlist-column">
             <div class="playlist-header">
                 <h3 id="playlist-title">Songs</h3>
@@ -60,7 +60,6 @@
                 <input type="file" id="file-input" multiple accept="audio/*" style="display: none;" webkitdirectory>
             </div>
             <div id="playlist" class="playlist-content">
-                <!-- Songs will be loaded here by script.js -->
                 <p class="empty-playlist-msg">Load a folder to see your music.</p>
             </div>
         </div>
